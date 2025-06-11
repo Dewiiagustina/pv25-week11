@@ -4,7 +4,7 @@ import csv
 import sqlite3
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton,
                              QFileDialog, QScrollArea, QGridLayout, QDialog, QMessageBox, QTextEdit, QDialogButtonBox,
-                             QMenuBar, QMenu, QAction, QStatusBar, QInputDialog, QHBoxLayout)
+                             QMenuBar, QMenu, QAction, QStatusBar, QInputDialog, QHBoxLayout,QDockWidget)
 from PyQt5.QtGui import QPixmap, QCursor
 from PyQt5.QtCore import Qt
 
@@ -152,8 +152,24 @@ class BukuApp(QMainWindow):
         layout.addStretch()
         layout.setContentsMargins(0, 0, 0, 0)
         container.setLayout(layout)
+        
+        # DockWidget untuk informasi atau menu tambahan
+        dock = QDockWidget("Informasi Pengguna", self)
+        dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 
-        self.status.addWidget(container, 1)
+        info_widget = QWidget()
+        info_layout = QVBoxLayout()
+        info_label = QLabel("Dibuat oleh:\nDewi Agustin Asri\nNIM: F1D022039")
+        info_label.setAlignment(Qt.AlignCenter)
+        info_label.setStyleSheet("padding: 10px; font-weight: bold;")
+        info_layout.addWidget(info_label)
+        info_widget.setLayout(info_layout)
+        dock.setAllowedAreas(Qt.AllDockWidgetAreas)
+        dock.setFeatures(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
+        dock.setWidget(info_widget)
+        self.addDockWidget(Qt.RightDockWidgetArea, dock)
+
+        #self.status.addWidget(container, 1)
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -346,17 +362,18 @@ class BukuApp(QMainWindow):
                 QMessageBox.information(self, "Tidak Ditemukan", f"Buku dengan judul '{title}' tidak ditemukan.")
 
     def export_csv(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Simpan CSV", "", "CSV Files (*.csv)")
-        if path:
-            self.c.execute("SELECT judul, pengarang, tahun, cover, sinopsis FROM buku")
-            rows = self.c.fetchall()
+        filename, _ = QFileDialog.getSaveFileName(self, "Simpan File CSV", "", "CSV Files (*.csv)")
+        if filename:
             try:
-                with open(path, mode='w', newline='', encoding='utf-8') as file:
+                with open(filename, mode='w', newline='', encoding='utf-8') as file:
                     writer = csv.writer(file)
-                    writer.writerow(['Judul', 'Pengarang', 'Tahun', 'Cover', 'Sinopsis'])
-                    writer.writerows(rows)
+                    writer.writerow(['ID', 'Judul', 'Pengarang', 'Tahun', 'Cover', 'Sinopsis'])
+                    self.c.execute("SELECT * FROM buku")
+                    for row in self.c.fetchall():
+                        writer.writerow(row)
+                QMessageBox.information(self, "Export Berhasil", f"Data berhasil disimpan di {filename}")
             except Exception as e:
-                QMessageBox.warning(self, "Error", f"Gagal ekspor CSV: {e}")
+                QMessageBox.warning(self, "Export Gagal", f"Gagal menyimpan file CSV.\n{str(e)}")
 
     def closeEvent(self, event):
         self.conn.close()
